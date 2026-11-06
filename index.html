@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PM SHRI TGMS Pegadapally | Mid-Day Meals Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
+   <header class="bg-slate-950/80 backdrop-blur-md border-b border-slate-800 p-3.5 sticky top-0 z-40 no-print">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black flex items-center justify-center shadow-lg shadow-amber-500/20">TGMS</div>
+        <div>
+          <span class="text-[10px] font-extrabold uppercase tracking-widest text-amber-400">PM POSHAN • Firebase Cloud Sync Active</span>
+          <h1 class="text-xs sm:text-base font-extrabold tracking-tight text-white">PM SHRI TELANGANA MODEL SCHOOL, PEGADAPALLY</h1>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="openLoginBtn" onclick="SFX.portal(1); toggleModal(true)" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs shadow-md transition">Staff Login →</button>
+        <div id="userBox" class="hidden items-center gap-2.5">
+          <span id="roleTag" class="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-amber-400 font-extrabold text-xs"></span>
+          <button onclick="SFX.tab(0); showView('public')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700">Home</button>
+          <button onclick="SFX.portal(0); logout()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow">Sign Out</button>
+        </div>
+      </div>
+    </div>
+   </header>
+    <main id="publicView" class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 flex-1 no-print">
+    <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-6 sm:p-12 border border-slate-800 shadow-2xl space-y-5">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider">
+        <span>PM SHRI & PM POSHAN Digital Governance</span>
+      </div>
+      <h2 class="text-2xl sm:text-5xl font-black tracking-tight leading-tight text-white">
+        Nourishing Young Minds.<br/>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-emerald-300">Equitable Nutrition & Audit Portal.</span>
+      </h2>
+      <p class="text-slate-300 text-sm sm:text-base max-w-3xl leading-relaxed">
+        Official digital management platform of PM SHRI Telangana Model School & Junior College, Pegadapally. Real-time wing-wise tracking (Classes 6-12), 150g rice calculation per head, and daily curry logging[span_3](start_span)[span_3](end_span).
+      </p>
+      <div class="pt-2">
+        <button onclick="SFX.portal(1); toggleModal(true)" class="px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm shadow-xl transition transform active:scale-95">Access Staff Portal (Secure Login)</button>
+      </div>
+    </section>
+         <section class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-950/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-xl">
+      <div><div class="text-[10px] font-bold text-slate-400 uppercase">Today's Status</div><div id="pubStatus" class="text-sm font-extrabold text-amber-400 mt-0.5">Awaiting Entry</div></div>
+      <div><div class="text-[10px] font-bold text-slate-400 uppercase">Enrolled Capacity</div><div id="pubEnrolled" class="text-xl font-black text-white mt-0.5">493</div></div>
+      <div><div class="text-[10px] font-bold text-emerald-400 uppercase">Meals Served Today</div><div id="pubMeals" class="text-xl font-black text-emerald-300 mt-0.5">0</div></div>
+      <div><div class="text-[10px] font-bold text-amber-400 uppercase">Eggs Distributed</div><div id="pubEggs" class="text-xl font-black text-amber-300 mt-0.5">0</div></div>
+    </section>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div class="bg-slate-950/60 p-6 rounded-2xl border border-slate-800 border-t-4 border-t-emerald-500 shadow-xl space-y-2"><h3 class="font-extrabold text-sm text-white">"No Child Studies on an Empty Stomach."</h3><p class="text-xs text-slate-400 leading-relaxed">A warm, balanced meal fuels classroom focus, memory retention, and academic mastery across all wings.</p></div>
+      <div class="bg-slate-950/60 p-6 rounded-2xl border border-slate-800 border-t-4 border-t-amber-500 shadow-xl space-y-2"><h3 class="font-extrabold text-sm text-white">"Annadanam Maha Danam — Equality at Every Table."</h3><p class="text-xs text-slate-400 leading-relaxed">Shared dining fosters mutual respect, dignity, and harmony among students of all social backgrounds.</p></div>
+      <div class="bg-slate-950/60 p-6 rounded-2xl border border-slate-800 border-t-4 border-t-indigo-500 shadow-xl space-y-2"><h3 class="font-extrabold text-sm text-white">"Accountable Nutrition & Rice Auditing."</h3><p class="text-xs text-slate-400 leading-relaxed">Precise 150g rice norm calculation per student ensures zero food wastage and 100% compliance[span_4](start_span)[span_4](end_span).</p></div>
+    </section>
+    </main>
+    <main id="adminView" class="hidden max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-5 flex-1 no-print">
+    <div class="rounded-2xl bg-gradient-to-r from-indigo-950 to-slate-950 text-white p-4 border border-indigo-500/40 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+      <div class="text-xs"><span class="px-2.5 py-1 rounded bg-amber-500 text-slate-950 font-black mr-2 uppercase">Official Directive</span><span id="noticeText">Submit daily attendance, rice calculations, and curry menu before 2:30 PM[span_5](start_span)[span_5](end_span).</span></div>
+      <span class="text-[11px] text-amber-400 font-extrabold">ROLE: ADMIN</span>
+    </div>
+    <div id="flagBanner" class="hidden rounded-xl bg-rose-950/80 border-2 border-rose-500 p-3.5 text-rose-200 text-xs font-extrabold shadow-lg"></div>
+
+    <div class="flex flex-wrap gap-2 bg-slate-950/60 p-2.5 rounded-2xl border border-slate-800">
+      <button onclick="SFX.tab(1); setAdminTab('entry')" id="aTab1" class="px-5 py-2.5 rounded-xl font-extrabold text-xs bg-slate-900 text-amber-400 shadow">1. Daily Wing Meal & Curry Entry</button>
+      <button onclick="SFX.tab(2); setAdminTab('rep')" id="aTab2" class="px-5 py-2.5 rounded-xl font-extrabold text-xs text-slate-400 hover:text-white">2. Reports & Signed PDF</button>
+    </div>
+         <section id="aSecEntry" class="space-y-5">
+      <div class="bg-slate-950/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div>
+            <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Select Entry Date</label>
+            <input type="date" id="aDate" onchange="SFX.date(); loadDateRecord()" class="mt-1 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 font-extrabold text-xs text-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <div>
+            <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Day</div>
+            <span id="aDayBadge" class="inline-block mt-1 px-3.5 py-2 rounded-xl bg-indigo-950 text-indigo-300 border border-indigo-800 font-extrabold text-xs">Monday</span>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button onclick="SFX.copy(); copyPrevDay()" class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-extrabold text-xs border border-slate-700 transition">⟳ Copy Prev Day</button>
+          <button onclick="SFX.fill(); fillAll100()" class="px-4 py-2.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 font-extrabold text-xs border border-emerald-700 transition">✓ All 100% Present</button>
+          <label class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300 font-extrabold text-xs cursor-pointer select-none">
+            <input type="checkbox" id="aHoliday" onchange="SFX.bell(); toggleHoliday()" class="accent-rose-500 rounded" /> Sunday / Holiday
+          </label>
+        </div>
+      </div>
+             <div id="wingPills" class="grid grid-cols-3 gap-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800 shadow-xl"></div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div class="lg:col-span-7 bg-slate-950/60 backdrop-blur-md p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 id="wingTitle" class="text-lg font-black text-white">Middle School Wing (Classes 6-8)</h3>
+            <div class="flex gap-2">
+              <button onclick="SFX.fill(); setWingFull(true)" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow">100% Present</button>
+              <button onclick="SFX.tab(0); setWingFull(false)" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs">Reset 0</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5" id="catInputsBox"></div>
+          <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+            <div class="text-xs font-bold text-slate-300">Wing Meals: <span id="wingSum" class="text-amber-400 font-black text-base">0</span></div>
+            <div class="flex gap-2">
+              <button onclick="stepWing(-1)" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200">← Prev Wing</button>
+              <button onclick="stepWing(1)" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow">Next Wing →</button>
+            </div>
+          </div>
+        </div>
+              <div class="lg:col-span-5 bg-slate-950/60 backdrop-blur-md p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col justify-between space-y-5">
+          <div class="space-y-4">
+            <h3 class="text-base font-black text-white">Daily Consumption & Menu Register</h3>
+            <div class="grid grid-cols-3 gap-2 text-center text-xs">
+              <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800"><div class="text-[10px] text-slate-400 font-bold">GEN (incl. OBC)</div><div id="sumGen" class="font-black text-base text-white mt-0.5">0</div></div>
+              <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800"><div class="text-[10px] text-slate-400 font-bold">SC</div><div id="sumSC" class="font-black text-base text-white mt-0.5">0</div></div>
+              <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800"><div class="text-[10px] text-slate-400 font-bold">ST</div><div id="sumST" class="font-black text-base text-white mt-0.5">0</div></div>
+            </div>
+
+            <!-- Manual Curry Input Box -->
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+              <label class="block text-xs font-extrabold text-amber-400 uppercase tracking-wide">Today's Curry / Menu Item (Manual Typed)</label>
+              <input type="text" id="curryInput" placeholder="e.g., Aloo Gobi Curry & Sambar" oninput="curRec.curryMenu=this.value" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-amber-500" />
+            </div>
+
+            <!-- Rice Calculation (150g per head) -->
+            <div class="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800 flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-extrabold text-emerald-300 uppercase tracking-wider">Rice Required (150g / head)[span_6](start_span)[span_6](end_span)</div>
+                <div class="text-xs text-emerald-400/80 mt-0.5">Total Campus Meals × 0.150 Kg</div>
+              </div>
+              <div id="riceDisplay" class="text-lg font-black text-emerald-300">0.00 Kg</div>
+            </div>
+
+            <!-- Egg Supply Box -->
+            <div class="p-3.5 rounded-xl bg-amber-950/30 border border-amber-800/60 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-amber-300 uppercase">Eggs Supplied Today?</span>
+                <div class="flex gap-1.5">
+                  <button id="eggY" onclick="setEggs(true)" class="px-3.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-black text-xs shadow">YES</button>
+                  <button id="eggN" onclick="setEggs(false)" class="px-3.5 py-1.5 rounded-lg bg-slate-900 text-slate-400 font-black text-xs border border-slate-700">NO</button>
+                </div>
+              </div>
+              <div id="eggBox" class="space-y-1 pt-1">
+                <div class="flex justify-between text-[11px] font-bold text-amber-200">
+                  <span>Total Eggs Served:</span>
+                  <button onclick="SFX.fill(); syncEggs()" class="underline text-amber-400">Match Meals</button>
+                </div>
+                <input type="number" id="totalEggsInp" min="0" oninput="SFX.key('General'); curRec.totalEggs=Number(this.value||0)" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-amber-500 font-black text-base text-white focus:outline-none" />
+              </div>
+            </div>
+          </div>
+          <button onclick="SFX.save(); saveDayRecord()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-black text-sm shadow-xl transition transform active:scale-98">✓ Save Daily Record (<span id="btnMealTot">0</span> Meals)</button>
+        </div>
+      </div>
+    </section>
+    </main>
+    <main id="masterView" class="hidden max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-5 flex-1 no-print">
+    <div class="rounded-2xl bg-slate-950 text-white p-5 border-l-8 border-amber-500 border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="text-[10px] font-extrabold uppercase tracking-widest text-amber-400">Master Admin Supervisory Authority</div>
+        <h3 class="text-base font-extrabold">Audit Inspection, Wing Caste Strength Manager & Directives</h3>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="SFX.tab(1); setMasterTab('audit')" id="mTab1" class="px-4 py-2.5 rounded-xl font-extrabold text-xs bg-amber-500 text-slate-950 shadow">1. Inspect Daily Data</button>
+        <button onclick="SFX.tab(2); setMasterTab('enroll')" id="mTab2" class="px-4 py-2.5 rounded-xl font-extrabold text-xs bg-slate-800 text-slate-200 hover:bg-slate-700">2. Edit Wing Capacities</button>
+        <button onclick="SFX.tab(3); setMasterTab('rep')" id="mTab3" class="px-4 py-2.5 rounded-xl font-extrabold text-xs bg-slate-800 text-slate-200 hover:bg-slate-700">3. Notice & Reports</button>
+      </div>
+    </div>
+
+    <section id="mSecAudit" class="bg-slate-950/60 backdrop-blur-md p-6 rounded-2xl border border-slate-800 shadow-xl space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <input type="date" id="mDate" onchange="SFX.date(); renderMasterAudit()" class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 font-extrabold text-xs text-white" />
+          <span id="mAuditBadge" class="px-3.5 py-2 rounded-xl bg-slate-900 text-slate-300 border border-slate-700 font-extrabold text-xs">Status</span>
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="mFlagInp" placeholder="Correction remark for Admin..." class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white" />
+          <button onclick="SFX.warn(); flagDateForAdmin()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow">⚑ Flag Date</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs border-collapse">
+          <thead><tr class="bg-slate-900 text-slate-300 border-b border-slate-800"><th class="p-3 text-left">Wing</th><th class="p-3">General (incl. OBC)</th><th class="p-3">SC</th><th class="p-3">ST</th><th class="p-3">Total Meals</th></tr></thead>
+          <tbody id="mAuditTbody" class="divide-y divide-slate-800 text-center text-white"></tbody>
+        </table>
+      </div>
+    </section>
+         <section id="mSecEnroll" class="hidden bg-slate-950/60 backdrop-blur-md p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+      <div class="p-4 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs font-bold text-amber-200 flex justify-between items-center">
+        <span>Master Student Enrollment List (3 Wings, 3 Caste Categories)[span_7](start_span)[span_7](end_span).</span>
+        <button onclick="SFX.save(); saveEnrollment()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow">✓ Save Enrolled Caps</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs border-collapse">
+          <thead><tr class="bg-slate-900 text-slate-300"><th class="p-3 text-left">Wing Name</th><th class="p-3">General (incl. OBC)</th><th class="p-3">SC</th><th class="p-3">ST</th><th class="p-3">Max Total</th></tr></thead>
+          <tbody id="mEnrollTbody" class="divide-y divide-slate-800 text-center text-white"></tbody>
+        </table>
+      </div>
+    </section>
+    <section id="mSecNotice" class="hidden bg-slate-950/60 backdrop-blur-md p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+      <h4 class="font-extrabold text-sm text-white">Send Official Notice to Admin Dashboard</h4>
+      <div class="flex gap-3">
+        <input type="text" id="mNoticeInp" placeholder="Enter instruction for Admin..." class="flex-1 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-white" />
+        <button onclick="SFX.save(); sendNotice()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow">Broadcast Notice</button>
+      </div>
+    </section>
+    </main>
+    <section id="repWorkspace" class="hidden max-w-7xl w-full mx-auto px-4 sm:px-6 pb-12 space-y-5">
+    <div class="bg-slate-950/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-4 no-print">
+      <div class="flex flex-wrap items-center gap-3">
+        <select id="repMode" onchange="SFX.date(); toggleRepInputs()" class="px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 font-extrabold text-xs text-white">
+          <option value="month">Monthly Report</option>
+          <option value="week">Weekly / Custom Range</option>
+        </select>
+        <input type="month" id="repMonth" onchange="renderReport()" class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 font-extrabold text-xs text-white" />
+        <input type="date" id="repStart" onchange="renderReport()" class="hidden px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 font-extrabold text-xs text-white" />
+        <input type="date" id="repEnd" onchange="renderReport()" class="hidden px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 font-extrabold text-xs text-white" />
+      </div>
+      <div class="flex flex-wrap gap-2.5">
+        <button onclick="SFX.excel(); exportExcel()" class="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-xs shadow">⬇ Export Excel (.xlsx)</button>
+        <button onclick="SFX.pdf(); exportPDF()" class="px-5 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-extrabold text-xs shadow">⬇ Download Signed PDF</button>
+        <button onclick="SFX.pdf(); window.print()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-xs shadow">🖨 Print A4</button>
+      </div>
+    </div>
+         <div id="printArea" class="bg-white text-slate-900 p-8 rounded-2xl shadow-2xl border border-slate-300 space-y-6">
+      <div class="border-b-2 border-slate-900 pb-4 flex justify-between items-start">
+        <div>
+          <div class="text-[10px] font-extrabold uppercase tracking-widest text-slate-600">GOVERNMENT OF TELANGANA • PM POSHAN SCHEME</div>
+          <h2 class="text-xl font-black text-slate-950">PM SHRI TELANGANA MODEL SCHOOL & JR. COLLEGE, PEGADAPALLY</h2>
+          <p class="text-xs font-bold text-slate-700">Mid-Day Meals, Curry Menu & Rice Consumption Audit Register</p>
+        </div>
+        <div id="repPeriodText" class="text-xs font-extrabold text-right text-slate-800"></div>
+      </div>
+
+      <div class="grid grid-cols-4 gap-3 text-center text-xs">
+        <div class="p-3 border rounded-xl bg-slate-50"><div class="text-[10px] font-bold text-slate-500">ENROLLED</div><div id="rEnr" class="font-black text-base text-slate-900">493</div></div>
+        <div class="p-3 border rounded-xl bg-slate-50"><div class="text-[10px] font-bold text-slate-500">WORKING DAYS</div><div id="rDays" class="font-black text-base text-slate-900">0</div></div>
+        <div class="p-3 border rounded-xl bg-emerald-50 border-emerald-300"><div class="text-[10px] font-bold text-emerald-800">TOTAL MEALS</div><div id="rMeals" class="font-black text-base text-emerald-950">0</div></div>
+        <div class="p-3 border rounded-xl bg-emerald-100 border-emerald-400"><div class="text-[10px] font-bold text-emerald-900">TOTAL RICE (KG)</div><div id="rRice" class="font-black text-base text-emerald-950">0.00 Kg</div></div>
+      </div>
+
+      <table class="w-full text-xs border-collapse border border-slate-300">
+        <thead><tr class="bg-slate-900 text-white uppercase text-[10px]"><th class="p-2 border border-slate-700 text-left">Wing Name</th><th class="p-2 border border-slate-700">Enrolled</th><th class="p-2 border border-slate-700">General (incl. OBC)</th><th class="p-2 border border-slate-700">SC</th><th class="p-2 border border-slate-700">ST</th><th class="p-2 border border-slate-700">Total Meals</th></tr></thead>
+        <tbody id="repWingTbody" class="divide-y divide-slate-200"></tbody>
+      </table>
+
+      <table class="w-full text-xs border-collapse border border-slate-300">
+        <thead><tr class="bg-slate-100 text-slate-900 uppercase text-[10px]"><th class="p-2 border border-slate-300 text-left">Date</th><th class="p-2 border border-slate-300">Day</th><th class="p-2 border border-slate-300">Status</th><th class="p-2 border border-slate-300 text-left">Curry / Menu</th><th class="p-2 border border-slate-300">Meals</th><th class="p-2 border border-slate-300">Rice (Kg)</th><th class="p-2 border border-slate-300">Eggs?</th><th class="p-2 border border-slate-300">Eggs Used</th></tr></thead>
+        <tbody id="repDateTbody" class="divide-y divide-slate-200"></tbody>
+      </table>
+
+      <div class="pt-6 border-t-2 border-slate-300 grid grid-cols-2 gap-6 text-xs">
+        <div class="p-4 border border-slate-300 rounded-xl bg-slate-50">
+          <div class="text-[10px] font-bold text-emerald-700 uppercase">✓ Digitally Verified & Submitted</div>
+          <div class="font-serif italic text-base font-bold text-emerald-900 mt-1">Bodige Tirupati</div>
+          <div class="font-extrabold text-slate-950">Sri Bodige Tirupati</div>
+          <div class="text-slate-600">MDM In-Charge • PM SHRI TGMS Pegadapally</div>
+        </div>
+        <div class="p-4 border border-slate-300 rounded-xl bg-slate-50">
+          <div class="text-[10px] font-bold text-indigo-700 uppercase">✓ Digitally Counter-Signed & Approved</div>
+          <div class="font-serif italic text-base font-bold text-indigo-950 mt-1">Prabhakar Reddy Kotha</div>
+          <div class="font-extrabold text-slate-950">Sri Prabhakar Reddy Kotha</div>
+          <div class="text-slate-600">Principal • PM SHRI TGMS Pegadapally</div>
+        </div>
+      </div>
+    </div>
+    </section>
+    <div id="loginModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 no-print">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+      <div class="flex justify-between items-center">
+        <div>
+          <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold text-[10px] uppercase">Firebase Auth</span>
+          <h3 class="font-black text-xl text-white mt-1">Official Staff Login</h3>
+        </div>
+        <button onclick="toggleModal(false)" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white font-bold">✕</button>
+      </div>
+      <form onsubmit="firebaseLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Email Address</label>
+          <input type="email" id="emailInp" required placeholder="admin@tgms.edu.in" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-bold text-white focus:outline-none focus:border-amber-500" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">Password</label>
+          <input type="password" id="passInp" required placeholder="••••••••" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-bold text-white focus:outline-none focus:border-amber-500" />
+        </div>
+        <div id="authErr" class="hidden text-xs font-bold text-rose-400 bg-rose-950/50 p-2.5 rounded-lg border border-rose-800"></div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg transition">Sign In with Password →</button>
+      </form>
+    </div>
+  </div>
+  <div id="toast" class="fixed bottom-4 right-4 z-50 hidden px-5 py-3 rounded-2xl bg-slate-950 text-white font-bold text-xs border-l-4 border-amber-400 shadow-2xl no-print"></div>
+    <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyATB-cR-cYjEi_OHz3ED_U_i5gxQUmJqhI",
+      authDomain: "mid-day-meals-e48d2.firebaseapp.com",
+      projectId: "mid-day-meals-e48d2",
+      storageBucket: "mid-day-meals-e48d2.firebasestorage.app",
+      messagingSenderId: "715233452949",
+      appId: "1:715233452949:web:276aa6bde23707e6840c9c",
+      measurementId: "G-SR5YY4TZL0"
+    };
+    let db = null, auth = null;
+    try {
+      firebase.initializeApp(firebaseConfig);
+      auth = firebase.auth();
+      db = firebase.firestore();
+    } catch (e) {}
+          const SFX = {
+      ctx: null, gain: null,
+      init() {
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+          this.gain = this.ctx.createGain();
+          this.gain.gain.value = 0.95;
+          this.gain.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      },
+      play(f, d=0.14, t='triangle', v=0.85, delay=0) {
+        this.init();
+        const now = this.ctx.currentTime + delay, o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        g.gain.setValueAtTime(0.001, now);
+        g.gain.linearRampToValueAtTime(v, now + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, now + d);
+        o.connect(g); g.connect(this.gain);
+        o.start(now); o.stop(now + d + 0.02);
+      },
+      pill(i) { const s=[392,523,784]; this.play(s[i%3],0.16,'triangle',0.9); },
+      tab(i) { this.play([440,659][i%2], 0.18, 'sine', 0.9); },
+      fill() { [523,784,1046].forEach((f,i)=>this.play(f,0.15,'triangle',0.9,i*0.05)); },
+      copy() { this.play(587,0.12,'square',0.6); this.play(880,0.2,'triangle',0.9,0.08); },
+      egg(y) { this.play(y?523:659,0.12); this.play(y?784:440,0.2,'sine',0.9,0.07); },
+      bell() { this.play(880,0.22,'sine',0.9); this.play(698,0.25,'triangle',0.85,0.12); },
+      key(c) { this.play({General:620,SC:700,ST:780}[c]||680, 0.08, 'sine', 0.8); },
+      save() { [523,659,784,1046].forEach((f,i)=>this.play(f,0.22,'triangle',0.95,i*0.07)); },
+      pdf() { [880,1175,1318].forEach((f,i)=>this.play(f,0.14,'sawtooth',0.6,i*0.04)); },
+      excel() { [988,1318,1568].forEach((f,i)=>this.play(f,0.15,'square',0.7,i*0.07)); },
+      date() { this.play(494,0.12); this.play(740,0.16,'triangle',0.85,0.06); },
+      portal(o) { this.play(o?392:587,0.14); this.play(o?587:349,0.22,'sine',0.9,0.08); },
+      warn() { this.play(220,0.18,'sawtooth',0.95); this.play(196,0.24,'sawtooth',0.95,0.15); }
+    };
+    ['pointerdown','keydown'].forEach(e => window.addEventListener(e, () => SFX.init(), {passive:true}));
+          const DEFAULT_WINGS = [
+      { id:"middle", name:"Middle School Wing (Classes 6-8)", General:91, SC:15, ST:4 },
+      { id:"high", name:"High School Wing (Classes 9-10)", General:149, SC:36, ST:8 },
+      { id:"college", name:"Junior College Wing (Classes 11-12)", General:164, SC:22, ST:4 }
+    ];
+    let wings = JSON.parse(localStorage.getItem('tgms_wings') || JSON.stringify(DEFAULT_WINGS));
+    let logs = JSON.parse(localStorage.getItem('tgms_logs') || '{}');
+    let curWingIdx = 0, curRec = null;
+          const todayISO = () => new Date().toISOString().slice(0,10);
+    const dayName = d => new Date(d+"T00:00:00").toLocaleDateString('en-US',{weekday:'long'});
+    function toast(m) {
+      const t = document.getElementById('toast');
+      t.textContent = m; t.classList.remove('hidden');
+      clearTimeout(window._tt); window._tt = setTimeout(()=>t.classList.add('hidden'), 3200);
+    }
+    async function syncCloud() {
+      if (!db) return;
+      try {
+        const cDoc = await db.collection('mdm_config').doc('wings_enrollment').get();
+        if (cDoc.exists && cDoc.data().wings) { wings = cDoc.data().wings; localStorage.setItem('tgms_wings', JSON.stringify(wings)); }
+        const nDoc = await db.collection('mdm_config').doc('notice').get();
+        if (nDoc.exists) document.getElementById('noticeText').textContent = nDoc.data().text;
+        const snap = await db.collection('mdm_daily_logs').get();
+        snap.forEach(d => logs[d.id] = d.data());
+        localStorage.setItem('tgms_logs', JSON.stringify(logs));
+      } catch (e) {}
+      updatePublicStrip();
+      }
+          function updatePublicStrip() {
+      const tot = wings.reduce((a,w)=>a+w.General+w.SC+w.ST, 0);
+      document.getElementById('pubEnrolled').textContent = tot;
+      const t = logs[todayISO()];
+      if (t) {
+        document.getElementById('pubStatus').textContent = t.isHoliday ? "Holiday" : "Served ✓";
+        document.getElementById('pubMeals').textContent = t.isHoliday ? 0 : (t.totalMeals||0);
+        document.getElementById('pubEggs').textContent = (!t.isHoliday && t.eggsSupplied) ? (t.totalEggs||0) : 0;
+      }
+    }
+    function toggleModal(show) { document.getElementById('loginModal').classList.toggle('hidden', !show); }
+    async function firebaseLogin(e) {
+      e.preventDefault();
+      const em = document.getElementById('emailInp').value.trim(), pw = document.getElementById('passInp').value;
+      try {
+        const cred = await auth.signInWithEmailAndPassword(em, pw);
+        let role = em.toLowerCase().includes('master') ? 'master admin' : 'admin';
+        if (db) {
+          const uDoc = await db.collection('users').doc(cred.user.uid).get();
+          if (uDoc.exists && uDoc.data().role) role = uDoc.data().role.toLowerCase();
+        }
+        toggleModal(false); enterRole(role);
+      } catch (err) {
+        SFX.warn();
+        const b = document.getElementById('authErr'); b.textContent = err.message; b.classList.remove('hidden');
+      }
+      }
+          function enterRole(role) {
+      document.getElementById('openLoginBtn').classList.add('hidden');
+      const ub = document.getElementById('userBox'); ub.classList.remove('hidden'); ub.classList.add('flex');
+      document.getElementById('roleTag').textContent = role.toUpperCase();
+      showView(role === 'master admin' ? 'master' : 'admin');
+      toast(`Logged in as ${role.toUpperCase()}`);
+    }
+    function logout() {
+      if (auth) auth.signOut().catch(()=>{});
+      document.getElementById('userBox').classList.add('hidden');
+      document.getElementById('openLoginBtn').classList.remove('hidden');
+      showView('public');
+    }
+    function showView(v) {
+      ['publicView','adminView','masterView','repWorkspace'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+      if (v==='public') { document.getElementById('publicView').classList.remove('hidden'); updatePublicStrip(); }
+      if (v==='admin') { document.getElementById('adminView').classList.remove('hidden'); setAdminTab('entry'); }
+      if (v==='master') { document.getElementById('masterView').classList.remove('hidden'); setMasterTab('audit'); }
+    }
+    function setAdminTab(t) {
+      document.getElementById('aSecEntry').classList.toggle('hidden', t!=='entry');
+      document.getElementById('repWorkspace').classList.toggle('hidden', t!=='rep');
+      if (t==='rep') renderReport();
+    }
+    function setMasterTab(t) {
+      document.getElementById('mSecAudit').classList.toggle('hidden', t!=='audit');
+      document.getElementById('mSecEnroll').classList.toggle('hidden', t!=='enroll');
+      document.getElementById('mSecNotice').classList.toggle('hidden', t!=='rep');
+      document.getElementById('repWorkspace').classList.toggle('hidden', t!=='rep');
+      if (t==='audit') renderMasterAudit();
+      if (t==='enroll') renderMasterEnroll();
+      if (t==='rep') renderReport();
+    }
+         function newDayObj(d) {
+      const sun = dayName(d)==='Sunday', map = {};
+      wings.forEach(w => map[w.id] = { General:sun?0:w.General, SC:sun?0:w.SC, ST:sun?0:w.ST });
+      return { date:d, dayName:dayName(d), isHoliday:sun, eggsSupplied:!sun, totalEggs:0, curryMenu:"", wings:map, flag:"" };
+    }
+    function loadDateRecord() {
+      const d = document.getElementById('aDate').value || todayISO();
+      document.getElementById('aDayBadge').textContent = dayName(d);
+      curRec = logs[d] ? JSON.parse(JSON.stringify(logs[d])) : newDayObj(d);
+      document.getElementById('aHoliday').checked = !!curRec.isHoliday;
+      document.getElementById('curryInput').value = curRec.curryMenu || "";
+      const fb = document.getElementById('flagBanner');
+      fb.classList.toggle('hidden', !curRec.flag); fb.textContent = curRec.flag || '';
+      renderWingPills(); renderActiveWing(); recalcTotals(true);
+    }
+    function renderWingPills() {
+      const box = document.getElementById('wingPills'); box.innerHTML = '';
+      wings.forEach((w, i) => {
+        const e = curRec.wings[w.id] || {General:0,SC:0,ST:0};
+        const sum = curRec.isHoliday ? 0 : (e.General+e.SC+e.ST), max = w.General+w.SC+w.ST;
+        const b = document.createElement('button');
+        b.className = i===curWingIdx ? "p-3 rounded-2xl bg-slate-900 text-white font-black text-xs border-2 border-amber-400 shadow" : "p-3 rounded-2xl bg-slate-900/40 text-slate-300 font-bold text-xs border border-slate-800 hover:bg-slate-900";
+        b.innerHTML = `<div class="truncate">${w.name.split(' ')[0]} Wing</div><div class="text-[11px] text-emerald-400 mt-1">${sum} / ${max} Served</div>`;
+        b.onclick = () => { SFX.pill(i); curWingIdx = i; renderWingPills(); renderActiveWing(); };
+        box.appendChild(b);
+      });
+        }
+          function renderActiveWing() {
+      const w = wings[curWingIdx], e = curRec.wings[w.id] || {General:0,SC:0,ST:0};
+      document.getElementById('wingTitle').textContent = w.name;
+      const box = document.getElementById('catInputsBox'); box.innerHTML = '';
+      ['General','SC','ST'].forEach(cat => {
+        const val = curRec.isHoliday ? 0 : e[cat];
+        box.innerHTML += `
+          <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+            <div class="flex justify-between text-xs font-bold text-slate-300"><span>${cat==='General'?'Gen (OBC)':cat}</span><span class="text-slate-500">Max: ${w[cat]}</span></div>
+            <input type="number" min="0" max="${w[cat]}" value="${val}" ${curRec.isHoliday?'disabled':''}
+              oninput="onCatInput('${cat}', this, ${w[cat]})"
+              class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 font-black text-base text-white focus:outline-none focus:border-amber-500" />
+          </div>`;
+      });
+      document.getElementById('wingSum').textContent = curRec.isHoliday ? 0 : (e.General+e.SC+e.ST);
+    }
+    function onCatInput(cat, el, max) {
+      let v = parseInt(el.value,10) || 0;
+      if (v < 0) v = 0;
+      if (v > max) { SFX.warn(); v = max; el.value = max; toast(`Max ${cat} enrolled is ${max}!`); }
+      else SFX.key(cat);
+      curRec.wings[wings[curWingIdx].id][cat] = v;
+      const e = curRec.wings[wings[curWingIdx].id];
+      document.getElementById('wingSum').textContent = e.General+e.SC+e.ST;
+      renderWingPills(); recalcTotals(true);
+    }
+    function stepWing(d) { curWingIdx = (curWingIdx + d + wings.length) % wings.length; SFX.pill(curWingIdx); renderWingPills(); renderActiveWing(); }
+        function setWingFull(full) {
+      const w = wings[curWingIdx];
+      curRec.wings[w.id] = { General:full?w.General:0, SC:full?w.SC:0, ST:full?w.ST:0 };
+      renderActiveWing(); renderWingPills(); recalcTotals(true);
+    }
+    function fillAll100() {
+      curRec.isHoliday = false; document.getElementById('aHoliday').checked = false;
+      wings.forEach(w => curRec.wings[w.id] = { General:w.General, SC:w.SC, ST:w.ST });
+      renderActiveWing(); renderWingPills(); recalcTotals(true); toast("All 3 wings set to 100% present!");
+    }
+    function copyPrevDay() {
+      const prev = Object.keys(logs).sort().filter(d => d < curRec.date && !logs[d].isHoliday).pop();
+      if (!prev) return fillAll100();
+      curRec.wings = JSON.parse(JSON.stringify(logs[prev].wings));
+      renderActiveWing(); renderWingPills(); recalcTotals(true); toast(`Copied attendance from ${prev}`);
+    }
+    function toggleHoliday() { curRec.isHoliday = document.getElementById('aHoliday').checked; renderActiveWing(); renderWingPills(); recalcTotals(true); }
+    function setEggs(y) { SFX.egg(y); curRec.eggsSupplied = y; recalcTotals(y); }
+    function syncEggs() { curRec.totalEggs = curRec.totalMeals; document.getElementById('totalEggsInp').value = curRec.totalMeals; }
+    
+    function recalcTotals(syncE) {
+      let g=0, sc=0, st=0;
+      if (!curRec.isHoliday) {
+        wings.forEach(w => {
+          const e = curRec.wings[w.id] || {General:0,SC:0,ST:0};
+          g+=Number(e.General); sc+=Number(e.SC); st+=Number(e.ST);
+        });
+      }
+      curRec.totalGeneral=g; curRec.totalSC=sc; curRec.totalST=st;
+      curRec.totalMeals = g+sc+st;
+      
+      // 150g Rice calculation per head
+      const riceKg = (curRec.totalMeals * 0.150).toFixed(2);
+      curRec.totalRiceKg = Number(riceKg);
+      document.getElementById('riceDisplay').textContent = `${riceKg} Kg`;
+
+      document.getElementById('sumGen').textContent=g; document.getElementById('sumSC').textContent=sc;
+      document.getElementById('sumST').textContent=st;
+      document.getElementById('btnMealTot').textContent=curRec.totalMeals;
+      if (curRec.isHoliday || !curRec.eggsSupplied) curRec.totalEggs = 0;
+      else if (syncE || !curRec.totalEggs) curRec.totalEggs = curRec.totalMeals;
+      document.getElementById('totalEggsInp').value = curRec.totalEggs;
+      document.getElementById('eggBox').classList.toggle('hidden', !curRec.eggsSupplied || curRec.isHoliday);
+    }
+    async function saveDayRecord() {
+      curRec.flag = ""; logs[curRec.date] = JSON.parse(JSON.stringify(curRec));
+      localStorage.setItem('tgms_logs', JSON.stringify(logs));
+      if (db) try { await db.collection('mdm_daily_logs').doc(curRec.date).set(curRec); } catch(e){}
+      updatePublicStrip(); toast(`Saved ${curRec.date}: ${curRec.totalMeals} Meals, ${curRec.totalRiceKg} Kg Rice`);
+      }
+          function renderMasterAudit() {
+      const d = document.getElementById('mDate').value || todayISO(), log = logs[d];
+      document.getElementById('mAuditBadge').textContent = !log ? "Pending Upload" : (log.isHoliday ? "Holiday" : `Served: ${log.totalMeals} Meals | Rice: ${log.totalRiceKg} Kg`);
+      const tb = document.getElementById('mAuditTbody'); tb.innerHTML = '';
+      wings.forEach(w => {
+        const e = (log && !log.isHoliday && log.wings[w.id]) ? log.wings[w.id] : {General:0,SC:0,ST:0};
+        tb.innerHTML += `<tr><td class="p-3 text-left font-bold text-white">${w.name}</td><td>${e.General}/${w.General}</td><td>${e.SC}/${w.SC}</td><td>${e.ST}/${w.ST}</td><td class="font-black text-emerald-400">${e.General+e.SC+e.ST}</td></tr>`;
+      });
+    }
+    async function flagDateForAdmin() {
+      const d = document.getElementById('mDate').value || todayISO(), msg = document.getElementById('mFlagInp').value.trim();
+      if (!msg) return toast("Enter remark first");
+      if (!logs[d]) logs[d] = newDayObj(d);
+      logs[d].flag = `Master Admin Correction Flag (${d}): ${msg}`;
+      localStorage.setItem('tgms_logs', JSON.stringify(logs));
+      if (db) try { await db.collection('mdm_daily_logs').doc(d).set(logs[d], {merge:true}); } catch(e){}
+      toast(`Flagged ${d} for Admin correction`);
+    }
+    function renderMasterEnroll() {
+      const tb = document.getElementById('mEnrollTbody'); tb.innerHTML = '';
+      wings.forEach((w, i) => {
+        tb.innerHTML += `<tr><td class="p-3 text-left font-bold text-white">${w.name}</td>
+          ${['General','SC','ST'].map(c=>`<td class="p-2"><input type="number" min="0" value="${w[c]}" oninput="SFX.key('${c}');wings[${i}]['${c}']=Number(this.value||0)" class="w-20 p-2 bg-slate-900 border border-slate-700 rounded-lg text-center font-bold text-white"/></td>`).join('')}
+          <td class="font-black text-amber-400">${w.General+w.SC+w.ST}</td></tr>`;
+      });
+    }
+    async function saveEnrollment() {
+      localStorage.setItem('tgms_wings', JSON.stringify(wings));
+      if (db) try { await db.collection('mdm_config').doc('wings_enrollment').set({wings}); } catch(e){}
+      renderMasterEnroll(); updatePublicStrip(); toast("Updated Wing Enrolled Caps!");
+    }
+    async function sendNotice() {
+      const text = document.getElementById('mNoticeInp').value.trim();
+      if (!text) return;
+      document.getElementById('noticeText').textContent = text;
+      if (db) try { await db.collection('mdm_config').doc('notice').set({text}); } catch(e){}
+      toast("Directive broadcasted to Admin!");
+      }
+          function toggleRepInputs() {
+      const m = document.getElementById('repMode').value === 'month';
+      document.getElementById('repMonth').classList.toggle('hidden', !m);
+      document.getElementById('repStart').classList.toggle('hidden', m);
+      document.getElementById('repEnd').classList.toggle('hidden', m);
+      renderReport();
+    }
+    function getRepDates() {
+      const mode = document.getElementById('repMode').value, all = Object.keys(logs).sort();
+      if (mode === 'month') {
+        const ym = document.getElementById('repMonth').value || todayISO().slice(0,7);
+        return { label:`Month: ${ym}`, dates:all.filter(d=>d.startsWith(ym)) };
+      }
+      const s = document.getElementById('repStart').value || todayISO(), e = document.getElementById('repEnd').value || todayISO();
+      return { label:`Week: ${s} to ${e}`, dates:all.filter(d=>d>=s && d<=e) };
+    }
+         function renderReport() {
+      const { label, dates } = getRepDates();
+      document.getElementById('repPeriodText').textContent = label;
+      let wDays=0, tMeals=0, tEggs=0, tRice=0, acc={};
+      wings.forEach(w => acc[w.id] = { name:w.name, enr:w.General+w.SC+w.ST, General:0, SC:0, ST:0, tot:0 });
+      const dTb = document.getElementById('repDateTbody'); dTb.innerHTML = '';
+      dates.forEach(d => {
+        const l = logs[d]; if (!l) return;
+        if (!l.isHoliday) {
+          wDays++; tMeals += Number(l.totalMeals||0); tRice += Number(l.totalRiceKg||0);
+          if (l.eggsSupplied) tEggs += Number(l.totalEggs||0);
+          wings.forEach(w => {
+            const e = l.wings?.[w.id] || {General:0,SC:0,ST:0};
+            acc[w.id].General+=e.General; acc[w.id].SC+=e.SC; acc[w.id].ST+=e.ST;
+            acc[w.id].tot += (e.General+e.SC+e.ST);
+          });
+        }
+        dTb.innerHTML += `<tr class="text-center"><td class="p-2 border border-slate-200 text-left font-bold">${d}</td><td class="p-2 border border-slate-200">${l.dayName||dayName(d)}</td><td class="p-2 border border-slate-200">${l.isHoliday?'HOLIDAY':'SERVED'}</td><td class="p-2 border border-slate-200 text-left font-medium">${l.curryMenu||'-'}</td><td class="p-2 border border-slate-200 font-bold">${l.isHoliday?0:(l.totalMeals||0)}</td><td class="p-2 border border-slate-200 font-bold text-emerald-800">${l.isHoliday?0:(l.totalRiceKg||0)} Kg</td><td class="p-2 border border-slate-200">${(!l.isHoliday&&l.eggsSupplied)?'YES':'NO'}</td><td class="p-2 border border-slate-200 font-bold">${(!l.isHoliday&&l.eggsSupplied)?(l.totalEggs||0):0}</td></tr>`;
+      });
+      document.getElementById('rDays').textContent=wDays; document.getElementById('rMeals').textContent=tMeals; document.getElementById('rEggs').textContent=tEggs;
+      document.getElementById('rRice').textContent=`${tRice.toFixed(2)} Kg`;
+      const wTb = document.getElementById('repWingTbody'); wTb.innerHTML = '';
+      wings.forEach(w => {
+        const a = acc[w.id];
+        wTb.innerHTML += `<tr class="text-center"><td class="p-2 border border-slate-200 text-left font-bold">${a.name}</td><td class="p-2 border border-slate-200">${a.enr}</td><td class="p-2 border border-slate-200">${a.General}</td><td class="p-2 border border-slate-200">${a.SC}</td><td class="p-2 border border-slate-200">${a.ST}</td><td class="p-2 border border-slate-200 font-black text-emerald-800">${a.tot}</td></tr>`;
+      });
+      }
+          function exportExcel() {
+      const { label } = getRepDates(), wb = XLSX.utils.book_new();
+      const ws1 = XLSX.utils.table_to_sheet(document.getElementById('repWingTbody').parentElement);
+      const ws2 = XLSX.utils.table_to_sheet(document.getElementById('repDateTbody').parentElement);
+      XLSX.utils.book_append_sheet(wb, ws1, "Wing_Summary");
+      XLSX.utils.book_append_sheet(wb, ws2, "Daily_Meals_Rice_Eggs");
+      XLSX.writeFile(wb, `TGMS_Pegadapally_MDM_${label.replace(/[^a-zA-Z0-9]/g,'_')}.xlsx`);
+      toast("Exported Excel (.xlsx) Workbook!");
+          }
+         function exportPDF() {
+      const { jsPDF } = window.jspdf, doc = new jsPDF();
+      const { label } = getRepDates();
+      doc.setFontSize(11); doc.text("PM SHRI TELANGANA MODEL SCHOOL & JR. COLLEGE, PEGADAPALLY", 105, 14, {align:'center'});
+      doc.setFontSize(8.5); doc.text(`PM POSHAN Mid-Day Meals, Curry Menu & Rice Audit (${label})`, 105, 20, {align:'center'});
+      doc.autoTable({ html: document.getElementById('repWingTbody').parentElement, startY: 25, styles:{fontSize:7.5} });
+      doc.autoTable({ html: document.getElementById('repDateTbody').parentElement, startY: doc.lastAutoTable.finalY + 6, styles:{fontSize:6.5} });
+      const y = doc.lastAutoTable.finalY + 14;
+      doc.setFontSize(8);
+      doc.text("Digitally Verified: Sri Bodige Tirupati (MDM In-Charge)", 14, y);
+      doc.text("Counter-Signed: Sri Prabhakar Reddy Kotha (Principal)", 115, y);
+      doc.save(`TGMS_Pegadapally_MDM_Signed_Report.pdf`);
+      toast("Downloaded Official Signed PDF!");
+         }
+         window.addEventListener('DOMContentLoaded', () => {
+      const t = todayISO();
+      ['aDate','mDate','repStart','repEnd'].forEach(id => document.getElementById(id).value = t);
+      document.getElementById('repMonth').value = t.slice(0,7);
+      loadDateRecord();
+      updatePublicStrip();
+      syncCloud();
+    });
+       </script>
+</body>
+</html>
+
